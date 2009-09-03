@@ -436,6 +436,7 @@ static struct ov772x_camera_info ov7725_info = {
 static struct tw9910_video_info tw9910_info = {
 	.buswidth	= SOCAM_DATAWIDTH_8,
 	.mpout		= TW9910_MPO_FIELD,
+	.start_offset	= 0x100,
 	.link = {
 		.power		= tw9910_power,
 		.board_info	= &migor_i2c_camera[1],

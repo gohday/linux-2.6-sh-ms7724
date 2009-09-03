@@ -33,6 +33,8 @@ struct tw9910_video_info {
 	unsigned long          buswidth;
 	enum tw9910_mpout_pin  mpout;
 	struct soc_camera_link link;
+	u16 start_offset;
+	u16 end_offset;
 };
 
 

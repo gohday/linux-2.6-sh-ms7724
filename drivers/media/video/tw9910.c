@@ -193,6 +193,10 @@
 #define RTSEL_FIELD 0x06 /* 0110 = FIELD */
 #define RTSEL_RTCO  0x07 /* 0111 = RTCO ( Real Time Control ) */
 
+/* HSYNC default */
+#define HSTART 0x0160
+#define HEND   0x0300
+
 /*
  * structure
  */
@@ -215,11 +219,6 @@ struct tw9910_cropping_ctrl {
 	u16 vactive;
 	u16 hdelay;
 	u16 hactive;
-};
-
-struct tw9910_hsync_ctrl {
-	u16 start;
-	u16 end;
 };
 
 struct tw9910_priv {
@@ -348,11 +347,6 @@ static const struct tw9910_cropping_ctrl tw9910_cropping_ctrl = {
 	.hactive = 0x02D0,
 };
 
-static const struct tw9910_hsync_ctrl tw9910_hsync_ctrl = {
-	.start = 0x0260,
-	.end   = 0x0300,
-};
-
 /*
  * general function
  */
@@ -413,19 +407,19 @@ static int tw9910_set_cropping(struct i2c_client *client,
 }
 
 static int tw9910_set_hsync(struct i2c_client *client,
-			    const struct tw9910_hsync_ctrl *hsync)
+			    const u16 start, const u16 end)
 {
 	int ret;
 
 	/* bit 10 - 3 */
 	ret = i2c_smbus_write_byte_data(client, HSGEGIN,
-					(hsync->start & 0x07F8) >> 3);
+					(start & 0x07F8) >> 3);
 	if (ret < 0)
 		return ret;
 
 	/* bit 10 - 3 */
 	ret = i2c_smbus_write_byte_data(client, HSEND,
-					(hsync->end & 0x07F8) >> 3);
+					(end & 0x07F8) >> 3);
 	if (ret < 0)
 		return ret;
 
@@ -435,9 +429,9 @@ static int tw9910_set_hsync(struct i2c_client *client,
 		return ret;
 
 	ret = i2c_smbus_write_byte_data(client, HSLOWCTL,
-					(ret & 0x88)                 |
-					(hsync->start & 0x0007) << 4 |
-					(hsync->end   & 0x0007));
+					(ret   & 0x88)        |
+					(start & 0x0007) << 4 |
+					(end   & 0x0007));
 
 	return ret;
 }
@@ -719,7 +713,9 @@ static int tw9910_set_crop(struct soc_camera_device *icd,
 	/*
 	 * set hsync
 	 */
-	ret = tw9910_set_hsync(priv->client, &tw9910_hsync_ctrl);
+	ret = tw9910_set_hsync(priv->client,
+			       HSTART + priv->info->start_offset,
+			       HEND   + priv->info->end_offset);
 	if (ret < 0)
 		goto tw9910_set_fmt_error;
 
