@@ -757,13 +757,19 @@ static int tw9910_set_fmt(struct soc_camera_device *icd,
 static int tw9910_try_fmt(struct soc_camera_device *icd,
 			  struct v4l2_format *f)
 {
+	struct tw9910_priv *priv = container_of(icd, struct tw9910_priv, icd);
 	struct v4l2_pix_format *pix = &f->fmt.pix;
 	const struct tw9910_scale_ctrl *scale;
+	enum v4l2_field field;
 
-	if (V4L2_FIELD_ANY == pix->field) {
-		pix->field = V4L2_FIELD_INTERLACED;
-	} else if (V4L2_FIELD_INTERLACED != pix->field) {
-		dev_err(&icd->dev, "Field type invalid.\n");
+	field = i2c_smbus_read_byte_data(priv->client, STATUS1) & 0x10 ?
+		V4L2_FIELD_INTERLACED_TB : V4L2_FIELD_INTERLACED_BT;
+
+	if ((V4L2_FIELD_ANY         == pix->field) ||
+	    (V4L2_FIELD_INTERLACED  == pix->field)) {
+		pix->field = field;
+	} else if (field != pix->field) {
+		dev_err(&icd->dev, "Field type invalid.%d\n", pix->field);
 		return -EINVAL;
 	}
 
