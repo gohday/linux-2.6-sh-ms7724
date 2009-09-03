@@ -22,6 +22,7 @@
 #include <linux/input.h>
 #include <video/sh_mobile_lcdc.h>
 #include <media/sh_mobile_ceu.h>
+#include <media/mt9t112.h>
 #include <asm/heartbeat.h>
 #include <asm/sh_eth.h>
 #include <asm/sh_keysc.h>
@@ -414,6 +415,94 @@ static struct i2c_board_info ts_i2c_clients = {
 	.irq		= IRQ0,
 };
 
+/* I2C Camera */
+static struct i2c_board_info i2c_camera[] = {
+	{
+		/* 1st camera */
+		I2C_BOARD_INFO("mt9t112", 0x3c),
+	},
+	{
+		/* 2nd camera */
+		I2C_BOARD_INFO("mt9t112", 0x3c),
+	},
+};
+
+/* mt9t112 */
+static int mt9t112_clock_ctrl(unsigned long rate)
+{
+	struct clk *camera_clk = clk_get(NULL, "video_clk");
+	return 0;
+	if (rate) {
+		clk_set_rate(camera_clk, rate);
+		clk_enable(camera_clk); /* start VIO_CKO */
+	} else {
+		clk_disable(camera_clk);
+	}
+
+	return 0;
+}
+
+static int mt9t112_power1(struct device *dev, int mode)
+{
+	gpio_set_value(GPIO_PTA3, mode);
+	if (mode)
+		mdelay(100);
+
+	return 0;
+}
+
+static struct mt9t112_camera_info mt9t112_info1 = {
+	.flags = MT9T112_FLAG_PCLK_RISING_EDGE | MT9T112_FLAG_DATAWIDTH_8,
+	.clock_ctrl = mt9t112_clock_ctrl,
+	.divider = { 0x49, 0x6, 0, 6, 0, 9, 9, 6, 0 }, /* for 24MHz */
+	.link = {
+		.i2c_adapter_id	= 0,
+		.power		= mt9t112_power1,
+		.bus_id		= 0,
+		.board_info	= &i2c_camera[0],
+		.module_name	= "mt9t112",
+	},
+};
+
+static int mt9t112_power2(struct device *dev, int mode)
+{
+	gpio_set_value(GPIO_PTA4, mode);
+	if (mode)
+		mdelay(100);
+
+	return 0;
+}
+
+static struct mt9t112_camera_info mt9t112_info2 = {
+	.flags = MT9T112_FLAG_PCLK_RISING_EDGE | MT9T112_FLAG_DATAWIDTH_8,
+	.clock_ctrl = mt9t112_clock_ctrl,
+	.divider = { 0x49, 0x6, 0, 6, 0, 9, 9, 6, 0 }, /* for 24MHz */
+	.link = {
+		.i2c_adapter_id	= 1,
+		.power		= mt9t112_power2,
+		.bus_id		= 1,
+		.board_info	= &i2c_camera[1],
+		.module_name	= "mt9t112",
+	},
+};
+
+static struct platform_device camera_devices[] = {
+	{
+		.name	= "soc-camera-pdrv",
+		.id	= 0,
+		.dev	= {
+			.platform_data = &mt9t112_info1.link,
+		},
+	},
+	{
+		.name	= "soc-camera-pdrv",
+		.id	= 1,
+		.dev	= {
+			.platform_data = &mt9t112_info2.link,
+		},
+	},
+};
+
 static struct platform_device *ecovec_devices[] __initdata = {
 	&heartbeat_device,
 	&nor_flash_device,
@@ -424,6 +513,8 @@ static struct platform_device *ecovec_devices[] __initdata = {
 	&ceu0_device,
 	&ceu1_device,
 	&keysc_device,
+	&camera_devices[0],
+	&camera_devices[1],
 };
 
 #define EEPROM_ADDR 0x50
@@ -694,6 +785,13 @@ static int __init arch_setup(void)
 	/* enable I2C device */
 	i2c_register_board_info(1, i2c1_devices,
 				ARRAY_SIZE(i2c1_devices));
+
+	/* enable Camera */
+	gpio_request(GPIO_FN_VIO_CKO, NULL);
+	gpio_request(GPIO_PTA3, NULL);
+	gpio_request(GPIO_PTA4, NULL);
+	gpio_direction_output(GPIO_PTA3, 0);
+	gpio_direction_output(GPIO_PTA4, 0);
 
 	return platform_add_devices(ecovec_devices,
 				    ARRAY_SIZE(ecovec_devices));
