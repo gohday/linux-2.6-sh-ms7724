@@ -23,6 +23,7 @@
 #include <video/sh_mobile_lcdc.h>
 #include <media/sh_mobile_ceu.h>
 #include <media/mt9t112.h>
+#include <media/tw9910.h>
 #include <asm/heartbeat.h>
 #include <asm/sh_eth.h>
 #include <asm/sh_keysc.h>
@@ -415,7 +416,7 @@ static struct i2c_board_info ts_i2c_clients = {
 	.irq		= IRQ0,
 };
 
-/* I2C Camera */
+/* I2C Camera/Video */
 static struct i2c_board_info i2c_camera[] = {
 	{
 		/* 1st camera */
@@ -424,6 +425,9 @@ static struct i2c_board_info i2c_camera[] = {
 	{
 		/* 2nd camera */
 		I2C_BOARD_INFO("mt9t112", 0x3c),
+	},
+	{
+		I2C_BOARD_INFO("tw9910", 0x45),
 	},
 };
 
@@ -486,6 +490,31 @@ static struct mt9t112_camera_info mt9t112_info2 = {
 	},
 };
 
+/* tw9910 */
+static int tw9910_power(struct device *dev, int mode)
+{
+	int val = mode ? 0 : 1;
+
+	gpio_set_value(GPIO_PTU2, val);
+	if (mode)
+		mdelay(100);
+
+	return 0;
+}
+
+static struct tw9910_video_info tw9910_info = {
+	.buswidth	= SOCAM_DATAWIDTH_8,
+	.mpout		= TW9910_MPO_FIELD,
+	.start_offset	= 0xb0,
+	.link = {
+		.i2c_adapter_id	= 0,
+		.bus_id		= 1,
+		.power		= tw9910_power,
+		.board_info	= &i2c_camera[2],
+		.module_name	= "tw9910",
+	}
+};
+
 static struct platform_device camera_devices[] = {
 	{
 		.name	= "soc-camera-pdrv",
@@ -499,6 +528,13 @@ static struct platform_device camera_devices[] = {
 		.id	= 1,
 		.dev	= {
 			.platform_data = &mt9t112_info2.link,
+		},
+	},
+	{
+		.name	= "soc-camera-pdrv",
+		.id	= 2,
+		.dev	= {
+			.platform_data = &tw9910_info.link,
 		},
 	},
 };
@@ -515,6 +551,7 @@ static struct platform_device *ecovec_devices[] __initdata = {
 	&keysc_device,
 	&camera_devices[0],
 	&camera_devices[1],
+	&camera_devices[2],
 };
 
 #define EEPROM_ADDR 0x50
@@ -792,6 +829,10 @@ static int __init arch_setup(void)
 	gpio_request(GPIO_PTA4, NULL);
 	gpio_direction_output(GPIO_PTA3, 0);
 	gpio_direction_output(GPIO_PTA4, 0);
+
+	/* enable Video */
+	gpio_request(GPIO_PTU2, NULL);
+	gpio_direction_output(GPIO_PTU2, 1);
 
 	return platform_add_devices(ecovec_devices,
 				    ARRAY_SIZE(ecovec_devices));
