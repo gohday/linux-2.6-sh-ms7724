@@ -93,6 +93,8 @@ struct sh_mobile_ceu_dev {
 	struct list_head capture;
 	struct videobuf_buffer *active;
 	int is_interlaced;
+#define TOP_ITL 1	/* 1: interlace top field start */
+#define BTM_ITL 2	/* 2: interlace bottom field start */
 
 	struct sh_mobile_ceu_info *pdata;
 
@@ -188,6 +190,8 @@ static void sh_mobile_ceu_capture(struct sh_mobile_ceu_dev *pcdev)
 {
 	struct soc_camera_device *icd = pcdev->icd;
 	dma_addr_t phys_addr_top, phys_addr_bottom;
+	unsigned long top1, top2;
+	unsigned long bottom1, bottom2;
 
 	/* The hardware is _very_ picky about this sequence. Especially
 	 * the CEU_CETCR_MAGIC value. It seems like we need to acknowledge
@@ -202,11 +206,23 @@ static void sh_mobile_ceu_capture(struct sh_mobile_ceu_dev *pcdev)
 	if (!pcdev->active)
 		return;
 
+	if (BTM_ITL == pcdev->is_interlaced) {
+		top1	= CDBYR;
+		top2	= CDBCR;
+		bottom1	= CDAYR;
+		bottom2	= CDACR;
+	} else {
+		top1	= CDAYR;
+		top2	= CDACR;
+		bottom1	= CDBYR;
+		bottom2	= CDBCR;
+	}
+
 	phys_addr_top = videobuf_to_dma_contig(pcdev->active);
-	ceu_write(pcdev, CDAYR, phys_addr_top);
+	ceu_write(pcdev, top1, phys_addr_top);
 	if (pcdev->is_interlaced) {
 		phys_addr_bottom = phys_addr_top + icd->width;
-		ceu_write(pcdev, CDBYR, phys_addr_bottom);
+		ceu_write(pcdev, bottom1, phys_addr_bottom);
 	}
 
 	switch (icd->current_fmt->fourcc) {
@@ -215,10 +231,10 @@ static void sh_mobile_ceu_capture(struct sh_mobile_ceu_dev *pcdev)
 	case V4L2_PIX_FMT_NV16:
 	case V4L2_PIX_FMT_NV61:
 		phys_addr_top += icd->width * icd->height;
-		ceu_write(pcdev, CDACR, phys_addr_top);
+		ceu_write(pcdev, top2, phys_addr_top);
 		if (pcdev->is_interlaced) {
 			phys_addr_bottom = phys_addr_top + icd->width;
-			ceu_write(pcdev, CDBCR, phys_addr_bottom);
+			ceu_write(pcdev, bottom2, phys_addr_bottom);
 		}
 	}
 
@@ -477,7 +493,19 @@ static int sh_mobile_ceu_set_bus_param(struct soc_camera_device *icd,
 	ceu_write(pcdev, CAMCR, value);
 
 	ceu_write(pcdev, CAPCR, 0x00300000);
-	ceu_write(pcdev, CAIFR, pcdev->is_interlaced ? 0x101 : 0);
+
+	switch (pcdev->is_interlaced) {
+	case TOP_ITL:
+		value = 0x101;
+		break;
+	case BTM_ITL:
+		value = 0x102;
+		break;
+	default:
+		value = 0;
+		break;
+	}
+	ceu_write(pcdev, CAIFR, value);
 
 	mdelay(1);
 
@@ -699,7 +727,11 @@ static int sh_mobile_ceu_try_fmt(struct soc_camera_device *icd,
 
 	switch (f->fmt.pix.field) {
 	case V4L2_FIELD_INTERLACED:
-		pcdev->is_interlaced = 1;
+	case V4L2_FIELD_INTERLACED_TB:
+		pcdev->is_interlaced = TOP_ITL;
+		break;
+	case V4L2_FIELD_INTERLACED_BT:
+		pcdev->is_interlaced = BTM_ITL;
 		break;
 	case V4L2_FIELD_ANY:
 		f->fmt.pix.field = V4L2_FIELD_NONE;
