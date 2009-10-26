@@ -24,6 +24,7 @@
 #include <media/sh_mobile_ceu.h>
 #include <media/mt9t112.h>
 #include <media/tw9910.h>
+#include <sound/sh_fsi.h>
 #include <asm/heartbeat.h>
 #include <asm/sh_eth.h>
 #include <asm/sh_keysc.h>
@@ -539,6 +540,66 @@ static struct platform_device camera_devices[] = {
 	},
 };
 
+/* FSI */
+/*
+ * FSI-B use external clock which came from ak464x.
+ * So, we should change parent of fsi
+ */
+#define FCLKBCR		0xa415000c
+static void fsimck_init(struct clk *clk)
+{
+	u32 status = ctrl_inl(clk->enable_reg);
+
+	/* use external clock */
+	status &= ~0x000000ff;
+	status |= 0x00000080;
+
+	ctrl_outl(status, clk->enable_reg);
+}
+
+static struct clk_ops fsimck_clk_ops = {
+	.init = fsimck_init,
+};
+
+static struct clk fsimckb_clk = {
+	.name		= "fsimckb_clk",
+	.id		= -1,
+	.ops		= &fsimck_clk_ops,
+	.enable_reg	= (void __iomem *)FCLKBCR,
+	.rate		= 0, /* unknown */
+};
+
+struct sh_fsi_platform_info fsi_info = {
+	.portb_flags = SH_FSI_BRS_INV |
+		       SH_FSI_OUT_SLAVE_MODE |
+		       SH_FSI_IN_SLAVE_MODE |
+		       SH_FSI_OFMT(I2S) |
+		       SH_FSI_IFMT(I2S),
+};
+
+static struct resource fsi_resources[] = {
+	[0] = {
+		.name	= "FSI",
+		.start	= 0xFE3C0000,
+		.end	= 0xFE3C021d,
+		.flags	= IORESOURCE_MEM,
+	},
+	[1] = {
+		.start  = 108,
+		.flags  = IORESOURCE_IRQ,
+	},
+};
+
+static struct platform_device fsi_device = {
+	.name		= "sh_fsi",
+	.id		= 0,
+	.num_resources	= ARRAY_SIZE(fsi_resources),
+	.resource	= fsi_resources,
+	.dev	= {
+		.platform_data	= &fsi_info,
+	},
+};
+
 static struct platform_device *ecovec_devices[] __initdata = {
 	&heartbeat_device,
 	&nor_flash_device,
@@ -552,6 +613,7 @@ static struct platform_device *ecovec_devices[] __initdata = {
 	&camera_devices[0],
 	&camera_devices[1],
 	&camera_devices[2],
+	&fsi_device,
 };
 
 #define EEPROM_ADDR 0x50
@@ -626,6 +688,8 @@ static void __init sh_eth_init(void)
 #define IODRIVEA  0xA405018A
 static int __init arch_setup(void)
 {
+	struct clk *fsib_clk;
+
 	/* enable SCIFA0 */
 	gpio_request(GPIO_FN_SCIF0_TXD, NULL);
 	gpio_request(GPIO_FN_SCIF0_RXD, NULL);
@@ -818,6 +882,28 @@ static int __init arch_setup(void)
 	gpio_direction_input(GPIO_PTR4);
 	gpio_direction_input(GPIO_PTR5);
 	gpio_direction_input(GPIO_PTR6);
+
+	/* enable FSI */
+	gpio_request(GPIO_FN_FSIMCKB,    NULL);
+	gpio_request(GPIO_FN_FSIIBSD,    NULL);
+	gpio_request(GPIO_FN_FSIOBSD,    NULL);
+	gpio_request(GPIO_FN_FSIIBBCK,   NULL);
+	gpio_request(GPIO_FN_FSIIBLRCK,  NULL);
+	gpio_request(GPIO_FN_FSIOBBCK,   NULL);
+	gpio_request(GPIO_FN_FSIOBLRCK,  NULL);
+	gpio_request(GPIO_FN_CLKAUDIOBO, NULL);
+
+	/* change parent of FSI B */
+	fsib_clk = clk_get(NULL, "fsib_clk");
+	clk_register(&fsimckb_clk);
+	clk_set_parent(fsib_clk, &fsimckb_clk);
+	clk_set_rate(fsib_clk, 11000);
+	clk_set_rate(&fsimckb_clk, 11000);
+	clk_put(fsib_clk);
+
+	gpio_request(GPIO_PTU0, NULL);
+	gpio_direction_output(GPIO_PTU0, 0);
+	mdelay(20);
 
 	/* enable I2C device */
 	i2c_register_board_info(1, i2c1_devices,
