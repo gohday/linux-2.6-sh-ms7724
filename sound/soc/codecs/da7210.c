@@ -27,7 +27,271 @@
 #include <asm/div64.h>
 
 #include "da7210.h"
-#include "da7210_regs.h"
+
+/* DA7210 register space */
+#define DA7210_PAGE0                     0x00
+#define DA7210_CONTROL                   0x01
+#define DA7210_STATUS                    0x02
+#define DA7210_STARTUP1                  0x03
+#define DA7210_STARTUP2                  0x04
+#define DA7210_STARTUP3                  0x05
+#define DA7210_UNKNOWN_1                 0x06
+#define DA7210_MIC_L                     0x07
+#define DA7210_MIC_R                     0x08
+#define DA7210_AUX1_L                    0x09
+#define DA7210_AUX1_R                    0x0A
+#define DA7210_AUX2                      0x0B
+#define DA7210_IN_GAIN                   0x0C
+#define DA7210_INMIX_L                   0x0D
+#define DA7210_INMIX_R                   0x0E
+#define DA7210_ADC_HPF                   0x0F
+#define DA7210_ADC                       0x10
+#define DA7210_ADC_EQ1_2                 0x11
+#define DA7210_ADC_EQ3_4                 0x12
+#define DA7210_ADC_EQ5                   0x13
+#define DA7210_DAC_HPF                   0x14
+#define DA7210_DAC_L                     0x15
+#define DA7210_DAC_R                     0x16
+#define DA7210_DAC_SEL                   0x17
+#define DA7210_SOFT_MUTE                 0x18
+#define DA7210_DAC_EQ1_2                 0x19
+#define DA7210_DAC_EQ3_4                 0x1A
+#define DA7210_DAC_EQ5                   0x1B
+#define DA7210_OUTMIX_L                  0x1C
+#define DA7210_OUTMIX_R                  0x1D
+#define DA7210_OUT1_L                    0x1E
+#define DA7210_OUT1_R                    0x1F
+#define DA7210_OUT2                      0x20
+#define DA7210_HP_L_VOL                  0x21
+#define DA7210_HP_R_VOL                  0x22
+#define DA7210_HP_CFG                    0x23
+#define DA7210_ZEROX                     0x24
+#define DA7210_DAI_SRC_SEL               0x25
+#define DA7210_DAI_CFG1                  0x26
+#define DA7210_DAI_CFG2                  0x27
+#define DA7210_DAI_CFG3                  0x28
+#define DA7210_PLL_DIV1                  0x29
+#define DA7210_PLL_DIV2                  0x2A
+#define DA7210_PLL_DIV3                  0x2B
+#define DA7210_PLL                       0x2C
+#define DA7210_GP1A_A0L                  0x2D
+#define DA7210_GP1A_A0H                  0x2E
+#define DA7210_GP1B_A0L                  0x2F
+#define DA7210_GP1B_A0H                  0x30
+#define DA7210_GP2A_A0L                  0x31
+#define DA7210_GP2A_A0H                  0x32
+#define DA7210_GP2B_A0L                  0x33
+#define DA7210_GP2B_A0H                  0x34
+#define DA7210_GP1C_A0L                  0x35
+#define DA7210_GP1C_A0H                  0x36
+#define DA7210_GP1D_A0L                  0x37
+#define DA7210_GP1D_A0H                  0x38
+#define DA7210_GP2C_A0L                  0x39
+#define DA7210_GP2C_A0H                  0x3A
+#define DA7210_GP2D_A0L                  0x3B
+#define DA7210_GP2D_A0H                  0x3C
+#define DA7210_GP1A_A1L                  0x3D
+#define DA7210_GP1A_A1H                  0x3E
+#define DA7210_GP1B_A1L                  0x3F
+#define DA7210_GP1B_A1H                  0x40
+#define DA7210_GP2A_A1L                  0x41
+#define DA7210_GP2A_A1H                  0x42
+#define DA7210_GP2B_A1L                  0x43
+#define DA7210_GP2B_A1H                  0x44
+#define DA7210_GP1C_A1L                  0x45
+#define DA7210_GP1C_A1H                  0x46
+#define DA7210_GP1D_A1L                  0x47
+#define DA7210_GP1D_A1H                  0x48
+#define DA7210_GP2C_A1L                  0x49
+#define DA7210_GP2C_A1H                  0x4A
+#define DA7210_GP2D_A1L                  0x4B
+#define DA7210_GP2D_A1H                  0x4C
+#define DA7210_GP1A_A2L                  0x4D
+#define DA7210_GP1A_A2H                  0x4E
+#define DA7210_GP1B_A2L                  0x4F
+#define DA7210_GP1B_A2H                  0x50
+#define DA7210_GP2A_A2L                  0x51
+#define DA7210_GP2A_A2H                  0x52
+#define DA7210_GP2B_A2L                  0x53
+#define DA7210_GP2B_A2H                  0x54
+#define DA7210_GP1C_A2L                  0x55
+#define DA7210_GP1C_A2H                  0x56
+#define DA7210_GP1D_A2L                  0x57
+#define DA7210_GP1D_A2H                  0x58
+#define DA7210_GP2C_A2L                  0x59
+#define DA7210_GP2C_A2H                  0x5A
+#define DA7210_GP2D_A2L                  0x5B
+#define DA7210_GP2D_A2H                  0x5C
+#define DA7210_GP1A_B1L                  0x5D
+#define DA7210_GP1A_B1H                  0x5E
+#define DA7210_GP1B_B1L                  0x5F
+#define DA7210_GP1B_B1H                  0x60
+#define DA7210_GP2A_B1L                  0x61
+#define DA7210_GP2A_B1H                  0x62
+#define DA7210_GP2B_B1L                  0x63
+#define DA7210_GP2B_B1H                  0x64
+#define DA7210_GP1C_B1L                  0x65
+#define DA7210_GP1C_B1H                  0x66
+#define DA7210_GP1D_B1L                  0x67
+#define DA7210_GP1D_B1H                  0x68
+#define DA7210_GP2C_B1L                  0x69
+#define DA7210_GP2C_B1H                  0x6A
+#define DA7210_GP2D_B1L                  0x6B
+#define DA7210_GP2D_B1H                  0x6C
+#define DA7210_GP1A_B2L                  0x6D
+#define DA7210_GP1A_B2H                  0x6E
+#define DA7210_GP1B_B2L                  0x6F
+#define DA7210_GP1B_B2H                  0x70
+#define DA7210_GP2A_B2L                  0x71
+#define DA7210_GP2A_B2H                  0x72
+#define DA7210_GP2B_B2L                  0x73
+#define DA7210_GP2B_B2H                  0x74
+#define DA7210_GP1C_B2L                  0x75
+#define DA7210_GP1C_B2H                  0x76
+#define DA7210_GP1D_B2L                  0x77
+#define DA7210_GP1D_B2H                  0x78
+#define DA7210_GP2C_B2L                  0x79
+#define DA7210_GP2C_B2H                  0x7A
+#define DA7210_GP2D_B2L                  0x7B
+#define DA7210_GP2D_B2H                  0x7C
+#define DA7210_GPF_SRC1                  0x7D
+#define DA7210_GPF_SRC2                  0x7E
+#define DA7210_DSP_CFG                   0x7F
+#define DA7210_PAGE1                     0x80
+#define DA7210_CHIP_ID                   0x81
+#define DA7210_INTERFACE                 0x82
+#define DA7210_ALC_MAX                   0x83
+#define DA7210_ALC_MIN                   0x84
+#define DA7210_ALC_NOIS                  0x85
+#define DA7210_ALC_ATT                   0x86
+#define DA7210_ALC_REL                   0x87
+#define DA7210_ALC_DEL                   0x88
+
+/* STARTUP1 bit fields */
+#define DA7210_SC_MST_EN                (1<<0)
+#define DA7210_SC_OVERRIDE              (1<<4)
+#define DA7210_SC_CLK_DIS               (1<<7)
+
+/* STARTUP2 bit fields */
+#define DA7210_LOUT1_L_STBY             (1<<0)
+#define DA7210_LOUT1_R_STBY             (1<<1)
+#define DA7210_LOUT2_STBY               (1<<2)
+#define DA7210_HP_L_STBY                (1<<3)
+#define DA7210_HP_R_STBY                (1<<4)
+#define DA7210_DAC_L_STBY               (1<<5)
+#define DA7210_DAC_R_STBY               (1<<6)
+
+/* STARTUP3 bit fields */
+#define DA7210_MIC_L_STBY               (1<<0)
+#define DA7210_MIC_R_STBY               (1<<1)
+#define DA7210_LIN1_L_STBY              (1<<2)
+#define DA7210_LIN1_R_STBY              (1<<3)
+#define DA7210_LIN2_STBY                (1<<4)
+#define DA7210_ADC_L_STBY               (1<<5)
+#define DA7210_ADC_R_STBY               (1<<6)
+
+/* MIC_L bit fields */
+#define DA7210_MICBIAS_EN               (1<<6)
+#define DA7210_MIC_L_EN                 (1<<7)
+
+/* MIC_R bit fields */
+#define DA7210_MIC_R_EN                 (1<<7)
+
+/* INMIX_L bit fields */
+#define DA7210_IN_L_EN                  (1<<7)
+
+/* INMIX_R bit fields */
+#define DA7210_IN_R_EN                  (1<<7)
+
+/* ADC_HPF bit fields */
+#define DA7210_ADC_HPF_EN               (1<<3)
+#define DA7210_ADC_VOICE_F0_12_5        (0<<4)
+#define DA7210_ADC_VOICE_F0_25          (1<<4)
+#define DA7210_ADC_VOICE_F0_50          (2<<4)
+#define DA7210_ADC_VOICE_F0_100         (3<<4)
+#define DA7210_ADC_VOICE_F0_150         (4<<4)
+#define DA7210_ADC_VOICE_F0_200         (5<<4)
+#define DA7210_ADC_VOICE_F0_300         (6<<4)
+#define DA7210_ADC_VOICE_F0_400         (7<<4)
+#define DA7210_ADC_VOICE_EN             (1<<7)
+
+/* ADC bit fields */
+#define DA7210_ADC_L_EN                 (1<<3)
+#define DA7210_ADC_R_EN                 (1<<7)
+
+/* DAC_HPF bit fields */
+#define DA7210_DAC_HPF_EN               (1<<3)
+#define DA7210_DAC_VOICE_F0_12_5        (0<<4)
+#define DA7210_DAC_VOICE_F0_25          (1<<4)
+#define DA7210_DAC_VOICE_F0_50          (2<<4)
+#define DA7210_DAC_VOICE_F0_100         (3<<4)
+#define DA7210_DAC_VOICE_F0_150         (4<<4)
+#define DA7210_DAC_VOICE_F0_200         (5<<4)
+#define DA7210_DAC_VOICE_F0_300         (6<<4)
+#define DA7210_DAC_VOICE_F0_400         (7<<4)
+#define DA7210_DAC_VOICE_EN             (1<<7)
+
+/* DAC_SEL bit fields */
+#define DA7210_DAC_L_SRC_DAI_L          (4<<0)
+#define DA7210_DAC_L_EN                 (1<<3)
+#define DA7210_DAC_R_SRC_DAI_R          (5<<4)
+#define DA7210_DAC_R_EN                 (1<<7)
+
+/* OUTMIX_L bit fields */
+#define DA7210_OUT_L_EN                 (1<<7)
+
+/* OUTMIX_R bit fields */
+#define DA7210_OUT_R_EN                 (1<<7)
+
+/* HP_CFG bit fields */
+#define DA7210_HP_HIGHZ_L               (1<<0)
+#define DA7210_HP_2CAP_MODE             (1<<1)
+#define DA7210_HP_SENSE_EN              (1<<2)
+#define DA7210_HP_L_EN                  (1<<3)
+#define DA7210_HP_HIGHZ_R               (1<<4)
+#define DA7210_180BSTEREO_TRACK         (1<<5)
+#define DA7210_HP_MODE                  (1<<6)
+#define DA7210_HP_R_EN                  (1<<7)
+
+/* DAI_SRC_SEL bit fields */
+#define DA7210_DAI_OUT_L_SRC            (6<<0)
+#define DA7210_DAI_OUT_R_SRC            (7<<4)
+
+/* DAI_CFG1 bit fields */
+#define DA7210_DAI_WORD_S16_LE          (0<<0)
+#define DA7210_DAI_WORD_S20_LE          (1<<0)
+#define DA7210_DAI_WORD_S24_LE          (2<<0)
+#define DA7210_DAI_WORD_S32_LE          (3<<0)
+#define DA7210_DAI_MODE_MASTER          (1<<7)
+#define DA7210_DAI_MODE_SLAVE           (0<<7)
+
+/* DAI_CFG3 bit fields */
+#define DA7210_DAI_FORMAT_I2SMODE       (0<<0)
+#define DA7210_DAI_FORMAT_RIGHT_J       (1<<0)
+#define DA7210_DAI_FORMAT_LEFT_J        (2<<0)
+#define DA7210_DAI_FORMAT_DSP           (3<<0)
+#define DA7210_DAI_OE                   (1<<3)
+#define DA7210_DAI_EN                   (1<<7)
+
+/*PLL_DIV3 bit fields */
+#define DA7210_MCLK_RANGE_32768_HZ      (0<<4)
+#define DA7210_MCLK_RANGE_10_20_MHZ     (1<<4)
+#define DA7210_MCLK_RANGE_20_40_MHZ     (2<<4)
+#define DA7210_MCLK_RANGE_40_80_MHZ     (3<<4)
+#define DA7210_PLL_BYP                  (1<<6)
+
+/* PLL bit fields */
+#define DA7210_PLL_FS_8000              (1<<0)
+#define DA7210_PLL_FS_11025             (2<<0)
+#define DA7210_PLL_FS_12000             (3<<0)
+#define DA7210_PLL_FS_16000             (5<<0)
+#define DA7210_PLL_FS_22050             (6<<0)
+#define DA7210_PLL_FS_24000             (7<<0)
+#define DA7210_PLL_FS_32000             (9<<0)
+#define DA7210_PLL_FS_44100             (10<<0)
+#define DA7210_PLL_FS_48000             (11<<0)
+#define DA7210_PLL_FS_88100             (14<<0)
+#define DA7210_PLL_FS_96000             (15<<0)
 
 #define DA7210_VERSION "2.0"
 
@@ -137,7 +401,9 @@ static int da7210_write(struct snd_soc_codec *codec, unsigned int reg,
 {
 
     u8 data[2];
-    
+    int ret;
+    int i;
+
     /* data[0] da7210 register offset */
     /* data[1] register data */
     data[0] = reg & 0xff;
@@ -145,23 +411,26 @@ static int da7210_write(struct snd_soc_codec *codec, unsigned int reg,
     
     /* I2C write debug Message*/
     /* printk(KERN_ALERT "Da7210: 12C write reg[%x]=0x%x\n",data[0],data[1]); */
-    
-    /* small delay */
-    msleep(1);
-    
+
     /* write the cache only if hardware write is successful */
-    if (codec->hw_write(codec->control_data, data, 2) == 2) {
-        if (data[0] < ARRAY_SIZE(da7210_reg)) {
-            da7210_write_reg_cache(codec, data[0], data[1]);
-        }
-        return 0;
-    }
-    else {
-            printk(KERN_ALERT "Da7210 Codec: I2C write Failed!\n");    
-            return -EIO;
+    for (i=0; i<20; i++) {
+	    /* small delay */
+	    msleep(1);
+    
+	    ret = codec->hw_write(codec->control_data, data, 2);
+	    if (ret == 2) {
+		    if (data[0] < ARRAY_SIZE(da7210_reg))
+			    da7210_write_reg_cache(codec, data[0], data[1]);
+		    ret = 0;
+		    break;
+	    }
+	    else {
+		    printk(KERN_ALERT "Da7210 Codec: I2C write re-try %d\n", i);
+		    ret = -EIO;
+	    }
     }
 
-    return 0;
+    return ret;
 }
 
 /*
@@ -366,7 +635,7 @@ static int da7210_hw_params(struct snd_pcm_substream *substream,
     struct snd_soc_pcm_runtime *rtd = substream->private_data;
     //struct snd_soc_dai_link *dai = rtd->dai;
     struct snd_soc_device *socdev = rtd->socdev;
-    struct snd_soc_codec *codec = socdev->codec;
+    struct snd_soc_codec *codec = socdev->card->codec;
     unsigned int dai_cfg1;
     unsigned int value;
 
@@ -426,6 +695,28 @@ static int da7210_hw_params(struct snd_pcm_substream *substream,
             return -EINVAL;
     }
 #endif
+
+    /* Renesas modify */
+    value = da7210_read_reg_cache(codec, DA7210_PLL);
+    value &= ~0xf;
+
+    switch (params_rate(params)) {
+    case 8000:	value |= DA7210_PLL_FS_8000;	break;
+    case 11025:	value |= DA7210_PLL_FS_11025;	break;
+    case 12000:	value |= DA7210_PLL_FS_12000;	break;
+    case 16000:	value |= DA7210_PLL_FS_16000;	break;
+    case 22050:	value |= DA7210_PLL_FS_22050;	break;
+    case 32000:	value |= DA7210_PLL_FS_32000;	break;
+    case 44100:	value |= DA7210_PLL_FS_44100;	break;
+    case 48000:	value |= DA7210_PLL_FS_48000;	break;
+    case 88100:	value |= DA7210_PLL_FS_88100;	break;
+    case 96000:	value |= DA7210_PLL_FS_96000;	break;
+    default:
+	    return -EINVAL;
+    }
+
+    da7210_write(codec, DA7210_PLL, value);
+
     return 0;
 }
 
@@ -467,6 +758,13 @@ static int da7210_set_dai_fmt(struct snd_soc_dai *codec_dai,
             return -EINVAL;
     }
 
+    /* Renesas original
+     *
+     * SH needs 64 bitclocks for
+     * data transmission frame length:
+     */
+    dai_cfg1 |= 0x4;
+
     da7210_write(codec, DA7210_DAI_CFG1, dai_cfg1);
     da7210_write(codec, DA7210_DAI_CFG3, dai_cfg3);
 
@@ -498,6 +796,14 @@ static int da7210_set_bias_level(struct snd_soc_codec *codec,
 #define DA7210_FORMATS (SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S20_3LE |\
             SNDRV_PCM_FMTBIT_S24_LE | SNDRV_PCM_FMTBIT_S32_LE)
 
+/* DAI operations */
+static struct snd_soc_dai_ops da7210_dai_ops = {
+	.hw_params	= da7210_hw_params,
+	.set_fmt	= da7210_set_dai_fmt,
+	.set_clkdiv	= da7210_set_dai_clkdiv,
+	.set_pll	= da7210_set_dai_pll,
+};
+
 struct snd_soc_dai da7210_dai[] = {
     {
         .name = "DA7210 IIS",
@@ -519,15 +825,7 @@ struct snd_soc_dai da7210_dai[] = {
             .formats = DA7210_FORMATS,
         },
         /* pcm operations */
-        .ops = {
-             .hw_params = da7210_hw_params,
-        },
-        /* DAI operations */
-        .dai_ops = {
-             .set_fmt = da7210_set_dai_fmt,
-             .set_clkdiv = da7210_set_dai_clkdiv,
-             .set_pll = da7210_set_dai_pll,
-        },
+        .ops = &da7210_dai_ops,
     },
 };
 EXPORT_SYMBOL_GPL(da7210_dai);
@@ -539,7 +837,7 @@ EXPORT_SYMBOL_GPL(da7210_dai);
 static int da7210_init(struct snd_soc_device *socdev)
 {
 
-    struct snd_soc_codec *codec = socdev->codec;
+    struct snd_soc_codec *codec = socdev->card->codec;
     int ret=0;
 
     codec->name = "DA7210";
@@ -630,7 +928,7 @@ static int da7210_init(struct snd_soc_device *socdev)
     da7210_add_widgets(codec);
 
     /* Register the SoC sound card */
-    ret = snd_soc_register_card(socdev);
+    ret = snd_soc_init_card(socdev);
     if (ret < 0) {
         goto card_err;
     }
@@ -654,7 +952,7 @@ static int da7210_i2c_probe(struct i2c_client *i2c,
                 const struct i2c_device_id *id)
 {
     struct snd_soc_device *socdev = da7210_socdev;
-    struct snd_soc_codec *codec = socdev->codec;
+    struct snd_soc_codec *codec = socdev->card->codec;
     int ret;
 
     i2c_set_clientdata(i2c, codec);
@@ -760,7 +1058,7 @@ static int da7210_probe(struct platform_device *pdev)
     }
 
     codec->private_data = da7210;
-    socdev->codec = codec;
+    socdev->card->codec = codec;
     mutex_init(&codec->mutex);
     INIT_LIST_HEAD(&codec->dapm_widgets);
     INIT_LIST_HEAD(&codec->dapm_paths);
@@ -785,7 +1083,7 @@ static int da7210_remove(struct platform_device *pdev)
 {
 
     struct snd_soc_device *socdev = platform_get_drvdata(pdev);
-    struct snd_soc_codec *codec = socdev->codec;
+    struct snd_soc_codec *codec = socdev->card->codec;
     
     snd_soc_free_pcms(socdev);
     snd_soc_dapm_free(socdev);
@@ -803,6 +1101,18 @@ struct snd_soc_codec_device soc_codec_dev_da7210 = {
     .remove =     da7210_remove,
 };
 EXPORT_SYMBOL_GPL(soc_codec_dev_da7210);
+
+static int __init da7210_modinit(void)
+{
+	return snd_soc_register_dai(da7210_dai);
+}
+module_init(da7210_modinit);
+
+static void __exit da7210_exit(void)
+{
+	snd_soc_unregister_dai(da7210_dai);
+}
+module_exit(da7210_exit);
 
 MODULE_DESCRIPTION("ASoC DA7210 driver");
 MODULE_LICENSE("GPL");
