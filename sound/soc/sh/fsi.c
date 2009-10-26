@@ -462,15 +462,27 @@ static void fsi_32data_push(struct fsi_priv *fsi,
 			   int send)
 {
 	u32 *dma_start;
+	int i;
 
 	/* get dma start position for FSI */
 	dma_start = (u32 *)runtime->dma_area;
 	dma_start += fsi->byte_offset / 4;
 
+	/* Don't use DMA mode
+	 *
+	 * If we use DMA on current FSI,
+	 * LCDC output will be broken though we are not sure why.
+	 * So, we use Soft-DMA mode here.
+	 * It is not so perfect answer, but not so bad because FSI interrupt is few
+	 *
 	dma_wait_for_completion(fsi->dma_chan);
 	dma_configure_channel(fsi->dma_chan, (SM_INC|0x400|TS_32|TM_BUR));
 	dma_write(fsi->dma_chan, (u32)dma_start,
 		  (u32)(fsi->base + DODT), send * 4);
+	*/
+
+	for (i = 0; i < send; i++)
+		fsi_reg_write(fsi, DODT, (u32)dma_start[i]);
 }
 
 /* playback interrupt */
