@@ -361,6 +361,8 @@ static int mt9t112_set_a_frame_size(struct soc_camera_device *icd,
 				   u16 height )
 {
 	int ret;
+	u16 wstart = (2048 - width) / 2;
+	u16 hstart = (1356 - height) / 2;
 
 	/* Output Width (A) */
 	ret = mt9t112_mcu_write(icd, VAR(26, 0), width);
@@ -375,28 +377,28 @@ static int mt9t112_set_a_frame_size(struct soc_camera_device *icd,
 	/* Row Start (A)
 	 * +4
 	 */
-	ret = mt9t112_mcu_write(icd, VAR(18, 2), 4);
+	ret = mt9t112_mcu_write(icd, VAR(18, 2), 4 + hstart);
 	if (ret < 0)
 		return ret;
 
 	/* Column Start (A)
 	 * +4
 	 */
-	ret = mt9t112_mcu_write(icd, VAR(18, 4), 4);
+	ret = mt9t112_mcu_write(icd, VAR(18, 4), 4 + wstart);
 	if (ret < 0)
 		return ret;
 
 	/* Row End (A)
 	 * +11
 	 */
-	ret = mt9t112_mcu_write(icd, VAR(18, 6), height + 11);
+	ret = mt9t112_mcu_write(icd, VAR(18, 6), height + 11 + hstart);
 	if (ret < 0)
 		return ret;
 
 	/* Column End (A)
 	 * +11
 	 */
-	ret = mt9t112_mcu_write(icd, VAR(18, 8), width + 11);
+	ret = mt9t112_mcu_write(icd, VAR(18, 8), width + 11 + wstart);
 	if (ret < 0)
 		return ret;
 
@@ -428,6 +430,42 @@ static int mt9t112_set_pll_dividers(struct soc_camera_device *icd,
 	ECHECKER(mt9t112_reg_mask_set(icd, 0x0012, 0x0fff, (p3 << 8) | (p2 << 4) | p1));
 	ECHECKER(mt9t112_reg_mask_set(icd, 0x002A, 0x7fff, 0x7000 | (p6 << 8) | (p5 << 4) | p4));
 	ECHECKER(mt9t112_reg_mask_set(icd, 0x002C, 0x100f, 0x1000 | p7));
+
+	return ret;
+}
+
+static int mt9t112_af_set(struct soc_camera_device *icd)
+{
+	int ret;
+
+	/*
+	 * Auto focus settings
+	 */
+	ECHECKER(mt9t112_mcu_write(icd, VAR(12, 13), 0x000F));	// AF_FILTER)S
+	ECHECKER(mt9t112_mcu_write(icd, VAR(12, 23), 0x0F0F));	// AF_THRESHOLD)S
+	ECHECKER(mt9t112_mcu_write(icd, VAR8(1, 0), 0x06)); // SEQ_CMD
+
+	//********** Add AF Register *************************
+	ECHECKER(mt9t112_reg_write(icd, 0x0614, 0x0000)); 	// SECOND_SCL_SDA_PD [1]
+	ECHECKER(mt9t112_mcu_write(icd, VAR8(1, 0), 0x05)); // SEQ_CMD [1]
+	ECHECKER(mt9t112_mcu_write(icd, VAR8(12, 0x0002), 0x02)); 	// AF_MODE [1]
+	ECHECKER(mt9t112_mcu_write(icd, VAR(12, 0x0003), 0x0002)); 	// AF_ALGO [1]
+	ECHECKER(mt9t112_mcu_write(icd, VAR(17, 0x0003), 0x8001)); 	// AFM_ALGO [1]
+	ECHECKER(mt9t112_mcu_write(icd, VAR(17, 0x000B), 0x0025)); 	// AFM_POS_MIN [1]
+	ECHECKER(mt9t112_mcu_write(icd, VAR(17, 0x000D), 0x0193)); 	// AFM_POS_MAX [1]
+	ECHECKER(mt9t112_mcu_write(icd, VAR8(17, 0x0021), 0x18)); 	// AFM_SI_SLAVE_ADDR [1]
+	ECHECKER(mt9t112_mcu_write(icd, VAR8(1, 0), 0x05));// SEQ_CMD
+
+	return ret;
+}
+
+static int mt9t112_af_trigger(struct soc_camera_device *icd)
+{
+	int ret;
+
+	//********* AF Trigger ***************
+	ECHECKER(mt9t112_reg_write(icd, 0x098e, 0xb019));
+	ECHECKER(mt9t112_reg_write(icd, 0x0990, 0x0001));
 
 	return ret;
 }
@@ -493,7 +531,7 @@ static int mt9t112_init_pll(struct soc_camera_device *icd)
 	/* poll to verify out of standby. Must Poll this bit */
 	for (i=0; i<100; i++) {
 		data = mt9t112_reg_read(icd, 0x0018);
-		if (0x4000 & data)
+		if (!(0x4000 & data))
 			break;
 		mdelay(10);
 	}
@@ -501,7 +539,7 @@ static int mt9t112_init_pll(struct soc_camera_device *icd)
 	return ret;
 }
 
-static int mt9t112_init_setting(struct soc_camera_device *icd)
+static int mt9t112_init_timing_param(struct soc_camera_device *icd)
 {
 
 	int ret;
@@ -705,6 +743,8 @@ static int mt9t112_start_capture(struct soc_camera_device *icd)
 
 	priv->info->clock_ctrl(clock);
 
+	mt9t112_af_trigger(icd);
+
 	dev_info(&icd->dev, "format : %s\n", priv->format->name);
 	dev_info(&icd->dev, "size   : %s (%d x %d)\n",
 		 priv->frame->name,
@@ -841,12 +881,14 @@ static int mt9t112_init_camera(struct soc_camera_device *icd)
 	ECHECKER(mt9t112_init_pll(icd));
 
 	/* section 2 */
-	ECHECKER(mt9t112_init_setting(icd));
+	ECHECKER(mt9t112_init_timing_param(icd));
+
+	ECHECKER(mt9t112_af_set(icd));
 
 	/*
 	 * section 7
 	 */
-	mt9t112_reg_mask_set(icd, 0x0018, 0x0004, 0);
+	ECHECKER(mt9t112_reg_mask_set(icd, 0x0018, 0x0004, 0));
 
 	/* Analog setting B */
 	ECHECKER(mt9t112_reg_write(icd, 0x3084, 0x2409));
@@ -957,16 +999,11 @@ static int mt9t112_try_fmt(struct soc_camera_device *icd,
 	const struct mt9t112_frame_size *frame;
 
 	frame = mt9t112_select_frame(pix->width, pix->height);
-	if (!frame) {
-		pix->width  = MAX_WIDTH;
+	if (!frame)
+		return -EINVAL;
 
-		pix->height = MAX_HEIGHT;
-	}
-	else {
-		pix->width  = frame->width;
-		pix->height = frame->height;
-	}
-
+	pix->width  = frame->width;
+	pix->height = frame->height;
 	pix->field  = V4L2_FIELD_NONE;
 
 	return 0;
