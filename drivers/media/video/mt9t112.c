@@ -732,8 +732,8 @@ static int mt9t112_release(struct soc_camera_device *icd)
 static int mt9t112_start_capture(struct soc_camera_device *icd)
 {
 	struct mt9t112_priv *priv = container_of(icd, struct mt9t112_priv, icd);
-//	u32 clock = 24500000;
-	u32 clock = 18000000;
+	u32 clock = 24000000;
+//	u32 clock = 18000000;
 //	u32 clock = 6750000;
 
 	if (!(priv->flags & INIT_DONE)) {
