@@ -960,6 +960,34 @@ static int __init arch_setup(void)
 	i2c_register_board_info(1, i2c1_devices,
 				ARRAY_SIZE(i2c1_devices));
 
+	/* enable SDHI0 */
+	gpio_request(GPIO_FN_SDHI0CD,  NULL);
+	gpio_request(GPIO_FN_SDHI0WP,  NULL);
+	gpio_request(GPIO_FN_SDHI0CMD, NULL);
+	gpio_request(GPIO_FN_SDHI0CLK, NULL);
+	gpio_request(GPIO_FN_SDHI0D3,  NULL);
+	gpio_request(GPIO_FN_SDHI0D2,  NULL);
+	gpio_request(GPIO_FN_SDHI0D1,  NULL);
+	gpio_request(GPIO_FN_SDHI0D0,  NULL);
+
+	/* enable SDHI1 */
+	gpio_request(GPIO_FN_SDHI1CD,  NULL);
+	gpio_request(GPIO_FN_SDHI1WP,  NULL);
+	gpio_request(GPIO_FN_SDHI1CMD, NULL);
+	gpio_request(GPIO_FN_SDHI1CLK, NULL);
+	gpio_request(GPIO_FN_SDHI1D3,  NULL);
+	gpio_request(GPIO_FN_SDHI1D2,  NULL);
+	gpio_request(GPIO_FN_SDHI1D1,  NULL);
+	gpio_request(GPIO_FN_SDHI1D0,  NULL);
+
+	gpio_request(GPIO_PTB6, NULL);
+	gpio_request(GPIO_PTB7, NULL);
+	gpio_direction_output(GPIO_PTB6, 1);
+	gpio_direction_output(GPIO_PTB7, 1);
+
+	/* I/O buffer drive ability is high for SDHI1 */
+	ctrl_outw((ctrl_inw(IODRIVEA) & ~0x3000) | 0x2000 , IODRIVEA);
+
 	/* enable Camera */
 	gpio_request(GPIO_FN_VIO_CKO, NULL);
 	gpio_request(GPIO_PTA3, NULL);

@@ -278,6 +278,25 @@ config MMC_TMIO
 	  This provides support for the SD/MMC cell found in TC6393XB,
 	  T7L66XB and also HTC ASIC3
 
+config MMC_SH_SDHI
+	tristate "SuperH Internal SDHI support"
+	depends on MMC_BLOCK && (CPU_SUBTYPE_SH7722 || CPU_SUBTYPE_SH7723 || CPU_SUBTYPE_SH7723 ||\
+	CPU_SUBTYPE_SH7724 ||  CONFIG_CPU_SUBTYPE_SH7366)
+	default m
+	help
+	  This selects the SuperH internal SD Host Interface(SDHI) controler.
+	  SDIO interface not Supported.
+
+	  If you select this controller, say M here.
+
+	  If unsure, say N.
+
+config MMC_SH_SDHI_NR_CHANNEL
+	int "Maximum number of support SD/MMC ports"
+	depends on MMC_SH_SDHI
+	default "2" if CPU_SUBTYPE_SH7723 || CPU_SUBTYPE_SH7724
+	default "1" if CPU_SUBTYPE_SH7722 || CPU_SUBTYPE_SH7366
+
 config MMC_CB710
 	tristate "ENE CB710 MMC/SD Interface support"
 	depends on PCI
