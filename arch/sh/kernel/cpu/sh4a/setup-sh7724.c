@@ -523,6 +523,65 @@ static struct platform_device jpu_device = {
 	},
 };
 
+/* SDHI */
+static struct resource sdhi0_resources[] = {
+	[0] = {
+		/* SDHI SDHII0 */
+		.start	= 100,
+		.flags	= IORESOURCE_IRQ,
+	},
+	[1] = {
+		/* SDHI SDHII1 */
+		.start	= 101,
+		.flags	= IORESOURCE_IRQ,
+	},
+	[2] = {
+		/* SDHI SDHII2 */
+		.start	= 102,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+
+static struct platform_device sdhi0_device = {
+	.name		= "sh-sdhi",
+	.id		= 0,
+	.dev		= {
+		.dma_mask		= NULL,
+		.coherent_dma_mask	= 0xffffffff,
+	},
+	.num_resources	= ARRAY_SIZE(sdhi0_resources),
+	.resource	= sdhi0_resources,
+};
+
+static struct resource sdhi1_resources[] = {
+	[0] = {
+		/* SDHI SDHII0 */
+		.start	= 23,
+		.flags	= IORESOURCE_IRQ,
+	},
+	[1] = {
+		/* SDHI SDHII1 */
+		.start	= 24,
+		.flags	= IORESOURCE_IRQ,
+	},
+	[2] = {
+		/* SDHI SDHII2 */
+		.start	= 25,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+
+static struct platform_device sdhi1_device = {
+	.name		= "sh-sdhi",
+	.id		= 1,
+	.dev		= {
+		.dma_mask		= NULL,
+		.coherent_dma_mask	= 0xffffffff,
+	},
+	.num_resources	= ARRAY_SIZE(sdhi1_resources),
+	.resource	= sdhi1_resources,
+};
+
 static struct platform_device *sh7724_devices[] __initdata = {
 	&cmt_device,
 	&tmu0_device,
@@ -539,6 +598,8 @@ static struct platform_device *sh7724_devices[] __initdata = {
 	&veu0_device,
 	&veu1_device,
 	&jpu_device,
+	&sdhi0_device,
+	&sdhi1_device,
 };
 
 static int __init sh7724_devices_setup(void)
