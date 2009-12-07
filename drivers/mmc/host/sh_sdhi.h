@@ -110,20 +110,17 @@
 #define R18_ENABLE	0x0100
 #define R18_INIT	0x0040
 
-#if defined(CONFIG_CPU_SUBTYPE_SH7723) || \
-    defined(CONFIG_CPU_SUBTYPE_SH7722) || \
+#if defined(CONFIG_CPU_SUBTYPE_SH7722) || \
+    defined(CONFIG_CPU_SUBTYPE_SH7723) || \
+    defined(CONFIG_CPU_SUBTYPE_SH7724) || \
     defined(CONFIG_CPU_SUBTYPE_SH7366)
 #define R18_MMC_TRANS	0x0001		/* for MMC */
 #define R18_TRANS	0x0001		/* for SD */
 #define R18_HS_TRANS	0x0000
 #else
-#define R18_MMC_TRANS	0x0000		/* for MMC */
-#define R18_TRANS	0x0000		/* for SD */
-#if defined(CONFIG_BCLK_OPTION_SUPPORT)
-#define R18_HS_TRANS	0x00ff
-#else
-#define R18_HS_TRANS	0x0000
-#endif /* BCLK_OPTION_SUPPORT */
+#define R18_MMC_TRANS	0x0002		/* for MMC */
+#define R18_TRANS	0x0002		/* for SD */
+#define R18_HS_TRANS	0x0001
 #endif /* CONFIG_CPU_SUBTYPE_SH7723 */
 
 /* R26 */
