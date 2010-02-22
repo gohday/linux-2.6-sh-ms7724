@@ -719,10 +719,16 @@ static void __init sh_eth_init(void)
 
 #define PORT_HIZA 0xA4050158
 #define IODRIVEA  0xA405018A
+#define FRQCRA    0xA4150000
+#define FRQCRB    0xA4150004
 static int __init arch_setup(void)
 {
 	struct clk *fsib_clk;
 	struct clk *clk;
+
+	/* set vpu clock (166MHz) */
+	__raw_writel(0x00000030, FRQCRB);
+	__raw_writel(__raw_readl(FRQCRA) | 0x80000000, FRQCRA);
 
 	/* enable SCIFA0 */
 	gpio_request(GPIO_FN_SCIF0_TXD, NULL);
