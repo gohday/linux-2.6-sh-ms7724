@@ -323,6 +323,13 @@ static struct platform_device ceu1_device = {
 	},
 };
 
+/* I2C device */
+static struct i2c_board_info i2c1_devices[] = {
+	{
+		I2C_BOARD_INFO("r2025sd", 0x32),
+	},
+};
+
 /* KEYSC */
 static struct sh_keysc_info keysc_info = {
 	.mode		= SH_KEYSC_MODE_1,
@@ -994,6 +1001,10 @@ static int __init arch_setup(void)
 	gpio_request(GPIO_PTU2, NULL);
 	gpio_direction_output(GPIO_PTU2, 1);
 
+	/* enable I2C device */
+	i2c_register_board_info(1, i2c1_devices,
+				ARRAY_SIZE(i2c1_devices));
+
 	return platform_add_devices(ecovec_devices,
 				    ARRAY_SIZE(ecovec_devices));
 }
@@ -1003,7 +1014,7 @@ static int __init devices_setup(void)
 	sh_eth_init();
 	return 0;
 }
-device_initcall(devices_setup);
+arch_initcall(devices_setup);
 
 
 static struct sh_machine_vector mv_ecovec __initmv = {
