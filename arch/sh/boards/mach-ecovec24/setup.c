@@ -34,14 +34,14 @@
 #include <cpu/sh7724.h>
 
 /*
- *  Address      Interface        BusWidth
- *-----------------------------------------
- *  0x0000_0000  uboot            16bit
- *  0x0004_0000  Linux romImage   16bit
- *  0x0014_0000  MTD for Linux    16bit
- *  0x0400_0000  Internal I/O     16/32bit
- *  0x0800_0000  DRAM             32bit
- *  0x1800_0000  MFI              16bit
+ * Area   Address                    Interface     size  BusWidth
+ * 0      0x0000_0000 ~ 0x03FF_FFFF  FROM          64MB  16bit
+ * 1      0x0400_0000 ~ 0x07FF_FFFF  Internal I/O  64MB  16/32bit
+ * 2      0x0800_0000 ~ 0x0BFF_FFFF  DRAM 2        64MB  32bit
+ * 3      0x0C00_0000 ~ 0x0FFF_FFFF  DRAM 3        64MB  32bit
+ * 4      0x1000_0000 ~ 0x13FF_FFFF  DRAM 4        64MB  32bit
+ * 5      0x1400_0000 ~ 0x17FF_FFFF  DRAM 5        64MB  32bit
+ * 6      0x1800_0000 ~ 0x1BFF_FFFF  MFI           64MB  16bit
  */
 
 /* Heartbeat */
@@ -73,10 +73,14 @@ static struct platform_device heartbeat_device = {
 /* MTD */
 static struct mtd_partition nor_flash_partitions[] = {
 	{
-		.name = "boot loader",
+		.name = "uboot",
 		.offset = 0,
-		.size = (5 * 1024 * 1024),
-		.mask_flags = MTD_WRITEABLE,  /* force read-only */
+		.size = (256 * 1024),
+		.mask_flags = MTD_CAP_ROM,
+	}, {
+		.name = "kernel",
+		.offset = MTDPART_OFS_APPEND,
+		.size = (2 * 1024 * 1024),
 	}, {
 		.name = "free-area",
 		.offset = MTDPART_OFS_APPEND,
@@ -737,16 +741,13 @@ static int __init arch_setup(void)
 	/* enable SCIFA0 */
 	gpio_request(GPIO_FN_SCIF0_TXD, NULL);
 	gpio_request(GPIO_FN_SCIF0_RXD, NULL);
+	gpio_request(GPIO_FN_SCIF0_SCK, NULL);
 
 	/* enable debug LED */
 	gpio_request(GPIO_PTG0, NULL);
 	gpio_request(GPIO_PTG1, NULL);
 	gpio_request(GPIO_PTG2, NULL);
 	gpio_request(GPIO_PTG3, NULL);
-	gpio_direction_output(GPIO_PTG0, 0);
-	gpio_direction_output(GPIO_PTG1, 0);
-	gpio_direction_output(GPIO_PTG2, 0);
-	gpio_direction_output(GPIO_PTG3, 0);
 	ctrl_outw((ctrl_inw(PORT_HIZA) & ~(0x1 << 1)) , PORT_HIZA);
 
 	/* enable USB */
@@ -978,6 +979,11 @@ static int __init arch_setup(void)
 	gpio_request(GPIO_FN_MDIO,         NULL);
 	gpio_request(GPIO_FN_MDC,          NULL);
 	gpio_request(GPIO_FN_LNKSTA,       NULL);
+
+	gpio_direction_output(GPIO_PTT0, 0);
+	gpio_direction_output(GPIO_PTT1, 0);
+	gpio_direction_output(GPIO_PTT2, 0);
+	gpio_direction_output(GPIO_PTT3, 0);
 
 	return platform_add_devices(ecovec_devices,
 				    ARRAY_SIZE(ecovec_devices));
