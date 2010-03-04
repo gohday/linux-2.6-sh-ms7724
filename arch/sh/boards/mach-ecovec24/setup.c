@@ -20,7 +20,6 @@
 #include <linux/i2c.h>
 #include <linux/i2c/tsc2007.h>
 #include <linux/input.h>
-#include <video/sh_mobile_lcdc.h>
 #include <media/mt9t112.h>
 #include <media/tw9910.h>
 #include <sound/sh_fsi.h>
@@ -210,49 +209,6 @@ static struct platform_device usb1_common_device = {
 	},
 	.num_resources	= ARRAY_SIZE(usb1_common_resources),
 	.resource	= usb1_common_resources,
-};
-
-/* LCDC */
-static struct sh_mobile_lcdc_info lcdc_info = {
-	.ch[0] = {
-		.interface_type = RGB18,
-		.chan = LCDC_CHAN_MAINLCD,
-		.bpp = 16,
-		.lcd_cfg = {
-			.sync = 0, /* hsync and vsync are active low */
-		},
-		.lcd_size_cfg = { /* 7.0 inch */
-			.width = 152,
-			.height = 91,
-		},
-		.board_cfg = {
-		},
-	}
-};
-
-static struct resource lcdc_resources[] = {
-	[0] = {
-		.name	= "LCDC",
-		.start	= 0xfe940000,
-		.end	= 0xfe941fff,
-		.flags	= IORESOURCE_MEM,
-	},
-	[1] = {
-		.start	= 106,
-		.flags	= IORESOURCE_IRQ,
-	},
-};
-
-static struct platform_device lcdc_device = {
-	.name		= "sh_mobile_lcdc_fb",
-	.num_resources	= ARRAY_SIZE(lcdc_resources),
-	.resource	= lcdc_resources,
-	.dev		= {
-		.platform_data	= &lcdc_info,
-	},
-	.archdata = {
-		.hwblk_id = HWBLK_LCDC,
-	},
 };
 
 /* CEU0 */
@@ -637,7 +593,6 @@ static struct platform_device *ecovec_devices[] __initdata = {
 	&sh_eth_device,
 	&usb0_host_device,
 	&usb1_common_device,
-	&lcdc_device,
 	&ceu0_device,
 	&ceu1_device,
 	&keysc_device,
@@ -780,94 +735,6 @@ static int __init arch_setup(void)
 	} else {
 		printk(KERN_INFO "USB1 host is selected\n");
 		usb1_common_device.name = "r8a66597_hcd";
-	}
-
-	/* enable LCDC */
-	gpio_request(GPIO_FN_LCDD23,   NULL);
-	gpio_request(GPIO_FN_LCDD22,   NULL);
-	gpio_request(GPIO_FN_LCDD21,   NULL);
-	gpio_request(GPIO_FN_LCDD20,   NULL);
-	gpio_request(GPIO_FN_LCDD19,   NULL);
-	gpio_request(GPIO_FN_LCDD18,   NULL);
-	gpio_request(GPIO_FN_LCDD17,   NULL);
-	gpio_request(GPIO_FN_LCDD16,   NULL);
-	gpio_request(GPIO_FN_LCDD15,   NULL);
-	gpio_request(GPIO_FN_LCDD14,   NULL);
-	gpio_request(GPIO_FN_LCDD13,   NULL);
-	gpio_request(GPIO_FN_LCDD12,   NULL);
-	gpio_request(GPIO_FN_LCDD11,   NULL);
-	gpio_request(GPIO_FN_LCDD10,   NULL);
-	gpio_request(GPIO_FN_LCDD9,    NULL);
-	gpio_request(GPIO_FN_LCDD8,    NULL);
-	gpio_request(GPIO_FN_LCDD7,    NULL);
-	gpio_request(GPIO_FN_LCDD6,    NULL);
-	gpio_request(GPIO_FN_LCDD5,    NULL);
-	gpio_request(GPIO_FN_LCDD4,    NULL);
-	gpio_request(GPIO_FN_LCDD3,    NULL);
-	gpio_request(GPIO_FN_LCDD2,    NULL);
-	gpio_request(GPIO_FN_LCDD1,    NULL);
-	gpio_request(GPIO_FN_LCDD0,    NULL);
-	gpio_request(GPIO_FN_LCDDISP,  NULL);
-	gpio_request(GPIO_FN_LCDHSYN,  NULL);
-	gpio_request(GPIO_FN_LCDDCK,   NULL);
-	gpio_request(GPIO_FN_LCDVSYN,  NULL);
-	gpio_request(GPIO_FN_LCDDON,   NULL);
-	gpio_request(GPIO_FN_LCDLCLK,  NULL);
-	ctrl_outw((ctrl_inw(PORT_HIZA) & ~0x0001), PORT_HIZA);
-
-	gpio_request(GPIO_PTE6, NULL);
-	gpio_request(GPIO_PTU1, NULL);
-	gpio_request(GPIO_PTR1, NULL);
-	gpio_request(GPIO_PTA2, NULL);
-	gpio_direction_input(GPIO_PTE6);
-	gpio_direction_output(GPIO_PTU1, 0);
-	gpio_direction_output(GPIO_PTR1, 0);
-	gpio_direction_output(GPIO_PTA2, 0);
-
-	/* I/O buffer drive ability is low */
-	ctrl_outw((ctrl_inw(IODRIVEA) & ~0x00c0) | 0x0040 , IODRIVEA);
-
-	if (gpio_get_value(GPIO_PTE6)) {
-		/* DVI */
-		lcdc_info.clock_source			= LCDC_CLK_EXTERNAL;
-		lcdc_info.ch[0].clock_divider		= 1,
-		lcdc_info.ch[0].lcd_cfg.name		= "DVI";
-		lcdc_info.ch[0].lcd_cfg.xres		= 1280;
-		lcdc_info.ch[0].lcd_cfg.yres		= 720;
-		lcdc_info.ch[0].lcd_cfg.left_margin	= 220;
-		lcdc_info.ch[0].lcd_cfg.right_margin	= 110;
-		lcdc_info.ch[0].lcd_cfg.hsync_len	= 40;
-		lcdc_info.ch[0].lcd_cfg.upper_margin	= 20;
-		lcdc_info.ch[0].lcd_cfg.lower_margin	= 5;
-		lcdc_info.ch[0].lcd_cfg.vsync_len	= 5;
-
-		gpio_set_value(GPIO_PTA2, 1);
-		gpio_set_value(GPIO_PTU1, 1);
-	} else {
-		/* Panel */
-
-		lcdc_info.clock_source			= LCDC_CLK_PERIPHERAL;
-		lcdc_info.ch[0].clock_divider		= 2,
-		lcdc_info.ch[0].lcd_cfg.name		= "Panel";
-		lcdc_info.ch[0].lcd_cfg.xres		= 800;
-		lcdc_info.ch[0].lcd_cfg.yres		= 480;
-		lcdc_info.ch[0].lcd_cfg.left_margin	= 220;
-		lcdc_info.ch[0].lcd_cfg.right_margin	= 110;
-		lcdc_info.ch[0].lcd_cfg.hsync_len	= 70;
-		lcdc_info.ch[0].lcd_cfg.upper_margin	= 20;
-		lcdc_info.ch[0].lcd_cfg.lower_margin	= 5;
-		lcdc_info.ch[0].lcd_cfg.vsync_len	= 5;
-
-		gpio_set_value(GPIO_PTR1, 1);
-
-		/* FIXME
-		 *
-		 * LCDDON control is needed for Panel,
-		 * but current sh_mobile_lcdc driver doesn't control it.
-		 * It is temporary correspondence
-		 */
-		gpio_request(GPIO_PTF4, NULL);
-		gpio_direction_output(GPIO_PTF4, 1);
 	}
 
 	/* enable CEU0 */
