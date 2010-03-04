@@ -14,8 +14,6 @@
 #include <linux/mtd/physmap.h>
 #include <linux/gpio.h>
 #include <linux/interrupt.h>
-#include <linux/io.h>
-#include <linux/delay.h>
 #include <linux/usb/r8a66597.h>
 #include <linux/i2c.h>
 #include <linux/i2c/tsc2007.h>
@@ -26,9 +24,9 @@
 #include <sound/sh_fsi.h>
 #include <media/sh_mobile_ceu.h>
 #include <asm/heartbeat.h>
-#include <asm/sh_eth.h>
 #include <asm/clock.h>
 #include <asm/sh_keysc.h>
+#include <asm/io.h>
 #include <cpu/sh7724.h>
 
 /*
@@ -104,38 +102,6 @@ static struct platform_device nor_flash_device = {
 	.dev		= {
 		.platform_data = &nor_flash_data,
 	},
-};
-
-/* SH Eth */
-#define SH_ETH_ADDR	(0xA4600000)
-#define SH_ETH_MAHR	(SH_ETH_ADDR + 0x1C0)
-#define SH_ETH_MALR	(SH_ETH_ADDR + 0x1C8)
-static struct resource sh_eth_resources[] = {
-	[0] = {
-		.start = SH_ETH_ADDR,
-		.end   = SH_ETH_ADDR + 0x1FC,
-		.flags = IORESOURCE_MEM,
-	},
-	[1] = {
-		.start = 91,
-		.flags = IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHLEVEL,
-	},
-};
-
-struct sh_eth_plat_data sh_eth_plat = {
-	.phy = 0x1f, /* SMSC LAN8700 */
-	.edmac_endian = EDMAC_LITTLE_ENDIAN,
-	.ether_link_active_low = 1
-};
-
-static struct platform_device sh_eth_device = {
-	.name = "sh-eth",
-	.id	= 0,
-	.dev = {
-		.platform_data = &sh_eth_plat,
-	},
-	.num_resources = ARRAY_SIZE(sh_eth_resources),
-	.resource = sh_eth_resources,
 };
 
 /* USB0 host */
@@ -635,7 +601,6 @@ static struct platform_device lcdc_device = {
 static struct platform_device *ecovec_devices[] __initdata = {
 	&heartbeat_device,
 	&nor_flash_device,
-	&sh_eth_device,
 	&usb0_host_device,
 	&usb1_common_device,
 	&lcdc_device,
@@ -648,6 +613,8 @@ static struct platform_device *ecovec_devices[] __initdata = {
 	&fsi_device,
 	&beu0_device,
 	&twodg_device,
+	&heartbeat_device,
+	&nor_flash_device,
 };
 
 #define EEPROM_ADDR 0x50
@@ -745,23 +712,6 @@ static int __init arch_setup(void)
 	gpio_direction_output(GPIO_PTG2, 0);
 	gpio_direction_output(GPIO_PTG3, 0);
 	ctrl_outw((ctrl_inw(PORT_HIZA) & ~(0x1 << 1)) , PORT_HIZA);
-
-	/* enable SH-Eth */
-	gpio_request(GPIO_PTA1, NULL);
-	gpio_direction_output(GPIO_PTA1, 1);
-	mdelay(20);
-
-	gpio_request(GPIO_FN_RMII_RXD0,    NULL);
-	gpio_request(GPIO_FN_RMII_RXD1,    NULL);
-	gpio_request(GPIO_FN_RMII_TXD0,    NULL);
-	gpio_request(GPIO_FN_RMII_TXD1,    NULL);
-	gpio_request(GPIO_FN_RMII_REF_CLK, NULL);
-	gpio_request(GPIO_FN_RMII_TX_EN,   NULL);
-	gpio_request(GPIO_FN_RMII_RX_ER,   NULL);
-	gpio_request(GPIO_FN_RMII_CRS_DV,  NULL);
-	gpio_request(GPIO_FN_MDIO,         NULL);
-	gpio_request(GPIO_FN_MDC,          NULL);
-	gpio_request(GPIO_FN_LNKSTA,       NULL);
 
 	/* enable USB */
 	ctrl_outw(0x0000, 0xA4D90000);
