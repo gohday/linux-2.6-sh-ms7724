@@ -28,6 +28,7 @@
 #include <asm/heartbeat.h>
 #include <asm/sh_eth.h>
 #include <asm/clock.h>
+#include <asm/sh_keysc.h>
 #include <cpu/sh7724.h>
 
 /*
@@ -329,6 +330,46 @@ static struct i2c_board_info i2c1_devices[] = {
 	},
 };
 
+/* KEYSC */
+static struct sh_keysc_info keysc_info = {
+	.mode		= SH_KEYSC_MODE_1,
+	.scan_timing	= 3,
+	.delay		= 50,
+	.kycr2_delay	= 100,
+	.keycodes	= { KEY_1, 0, 0, 0, 0,
+			    KEY_2, 0, 0, 0, 0,
+			    KEY_3, 0, 0, 0, 0,
+			    KEY_4, 0, 0, 0, 0,
+			    KEY_5, 0, 0, 0, 0,
+			    KEY_6, 0, 0, 0, 0, },
+};
+
+static struct resource keysc_resources[] = {
+	[0] = {
+		.name	= "KEYSC",
+		.start  = 0x044b0000,
+		.end    = 0x044b000f,
+		.flags  = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start  = 79,
+		.flags  = IORESOURCE_IRQ,
+	},
+};
+
+static struct platform_device keysc_device = {
+	.name           = "sh_keysc",
+	.id             = 0, /* keysc0 clock */
+	.num_resources  = ARRAY_SIZE(keysc_resources),
+	.resource       = keysc_resources,
+	.dev	= {
+		.platform_data	= &keysc_info,
+	},
+	.archdata = {
+		.hwblk_id = HWBLK_KEYSC,
+	},
+};
+
 /* TouchScreen */
 #define IRQ0 32
 static int ts_get_pendown_state(void)
@@ -599,6 +640,7 @@ static struct platform_device *ecovec_devices[] __initdata = {
 	&lcdc_device,
 	&ceu0_device,
 	&ceu1_device,
+	&keysc_device,
 	&camera_devices[0],
 	&camera_devices[1],
 	&camera_devices[2],
@@ -869,6 +911,15 @@ static int __init arch_setup(void)
 	gpio_request(GPIO_FN_VIO1_VD,  NULL);
 	gpio_request(GPIO_FN_VIO1_CLK, NULL);
 	platform_resource_setup_memory(&ceu1_device, "ceu1", 4 << 20);
+
+	/* enable KEYSC */
+	gpio_request(GPIO_FN_KEYOUT5_IN5, NULL);
+	gpio_request(GPIO_FN_KEYOUT4_IN6, NULL);
+	gpio_request(GPIO_FN_KEYOUT3,     NULL);
+	gpio_request(GPIO_FN_KEYOUT2,     NULL);
+	gpio_request(GPIO_FN_KEYOUT1,     NULL);
+	gpio_request(GPIO_FN_KEYOUT0,     NULL);
+	gpio_request(GPIO_FN_KEYIN0,      NULL);
 
 	/* enable user debug switch */
 	gpio_request(GPIO_PTR0, NULL);
