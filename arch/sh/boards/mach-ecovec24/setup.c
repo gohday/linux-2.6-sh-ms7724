@@ -27,7 +27,7 @@
 #include <sound/sh_fsi.h>
 #include <asm/heartbeat.h>
 #include <asm/sh_eth.h>
-	#include <asm/clock.h>
+#include <asm/sh_keysc.h>
 #include <cpu/sh7724.h>
 
 /*
