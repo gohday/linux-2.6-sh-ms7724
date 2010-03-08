@@ -210,11 +210,14 @@ static inline void __iomem *__ioremap(phys_addr_t address, unsigned long size,
 #define in_be32(a) __raw_readl((const void __iomem __force *)(a))
 #define in_be16(a) __raw_readw(a)
 
+#define writel_be(v, a)	out_be32((__force unsigned *)a, v)
+#define readl_be(a)	in_be32((__force unsigned *)a)
+
 /*
  * Little endian
  */
 
-#define out_le32(a, v) __raw_writel(__cpu_to_le32(v), (a));
+#define out_le32(a, v) __raw_writel(__cpu_to_le32(v), (a))
 #define out_le16(a, v) __raw_writew(__cpu_to_le16(v), (a))
 
 #define in_le32(a) __le32_to_cpu(__raw_readl(a))

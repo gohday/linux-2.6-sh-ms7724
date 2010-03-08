@@ -74,6 +74,7 @@ static struct iforce_device iforce_device[] = {
 	{ 0x05ef, 0x8884, "AVB Mag Turbo Force",			btn_avb_wheel, abs_wheel, ff_iforce },
 	{ 0x05ef, 0x8888, "AVB Top Shot Force Feedback Racing Wheel",	btn_avb_tw, abs_wheel, ff_iforce }, //?
 	{ 0x061c, 0xc0a4, "ACT LABS Force RS",                          btn_wheel, abs_wheel, ff_iforce }, //?
+	{ 0x061c, 0xc084, "ACT LABS Force RS",				btn_wheel, abs_wheel, ff_iforce },
 	{ 0x06f8, 0x0001, "Guillemot Race Leader Force Feedback",	btn_wheel, abs_wheel, ff_iforce }, //?
 	{ 0x06f8, 0x0004, "Guillemot Force Feedback Racing Wheel",	btn_wheel, abs_wheel, ff_iforce }, //?
 	{ 0x06f8, 0x0004, "Gullemot Jet Leader 3D",			btn_joystick, abs_joystick, ff_iforce }, //?
@@ -209,7 +210,7 @@ static int iforce_open(struct input_dev *dev)
 	return 0;
 }
 
-static void iforce_release(struct input_dev *dev)
+static void iforce_close(struct input_dev *dev)
 {
 	struct iforce *iforce = input_get_drvdata(dev);
 	int i;
@@ -227,30 +228,17 @@ static void iforce_release(struct input_dev *dev)
 
 		/* Disable force feedback playback */
 		iforce_send_packet(iforce, FF_CMD_ENABLE, "\001");
+		/* Wait for the command to complete */
+		wait_event_interruptible(iforce->wait,
+			!test_bit(IFORCE_XMIT_RUNNING, iforce->xmit_flags));
 	}
 
-	switch (iforce->bus) {
-#ifdef CONFIG_JOYSTICK_IFORCE_USB
-		case IFORCE_USB:
-			usb_kill_urb(iforce->irq);
-
-			/* The device was unplugged before the file
-			 * was released */
-			if (iforce->usbdev == NULL) {
-				iforce_delete_device(iforce);
-				kfree(iforce);
-			}
-		break;
-#endif
-	}
-}
-
-void iforce_delete_device(struct iforce *iforce)
-{
 	switch (iforce->bus) {
 #ifdef CONFIG_JOYSTICK_IFORCE_USB
 	case IFORCE_USB:
-		iforce_usb_delete(iforce);
+		usb_kill_urb(iforce->irq);
+		usb_kill_urb(iforce->out);
+		usb_kill_urb(iforce->ctrl);
 		break;
 #endif
 #ifdef CONFIG_JOYSTICK_IFORCE_232
@@ -302,7 +290,7 @@ int iforce_init_device(struct iforce *iforce)
 
 	input_dev->name = "Unknown I-Force device";
 	input_dev->open = iforce_open;
-	input_dev->close = iforce_release;
+	input_dev->close = iforce_close;
 
 /*
  * On-device memory allocation.

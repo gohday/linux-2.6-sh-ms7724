@@ -96,9 +96,6 @@ struct acer_quirks {
 MODULE_ALIAS("wmi:67C3371D-95A3-4C37-BB61-DD47B491DAAB");
 MODULE_ALIAS("wmi:6AF4F258-B401-42fd-BE91-3D4AC2D7C0D3");
 
-/* Temporary workaround until the WMI sysfs interface goes in */
-MODULE_ALIAS("dmi:*:*Acer*:*:");
-
 /*
  * Interface capability flags
  */
@@ -746,7 +743,9 @@ static acpi_status WMID_set_u32(u32 value, u32 cap, struct wmi_interface *iface)
 			return AE_BAD_PARAMETER;
 		if (quirks->mailled == 1) {
 			param = value ? 0x92 : 0x93;
+			i8042_lock_chip();
 			i8042_command(&param, 0x1059);
+			i8042_unlock_chip();
 			return 0;
 		}
 		break;
@@ -935,7 +934,7 @@ static int __devinit acer_backlight_init(struct device *dev)
 	acer_backlight_device = bd;
 
 	bd->props.power = FB_BLANK_UNBLANK;
-	bd->props.brightness = max_brightness;
+	bd->props.brightness = read_brightness(bd);
 	bd->props.max_brightness = max_brightness;
 	backlight_update_status(bd);
 	return 0;

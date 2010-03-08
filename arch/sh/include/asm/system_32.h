@@ -63,6 +63,16 @@ do {									\
 #define __restore_dsp(tsk)	do { } while (0)
 #endif
 
+#if defined(CONFIG_CPU_SH4A)
+#define __icbi(addr)	__asm__ __volatile__ ( "icbi @%0\n\t" : : "r" (addr))
+#else
+#define __icbi(addr)	mb()
+#endif
+
+#define __ocbp(addr)	__asm__ __volatile__ ( "ocbp @%0\n\t" : : "r" (addr))
+#define __ocbi(addr)	__asm__ __volatile__ ( "ocbi @%0\n\t" : : "r" (addr))
+#define __ocbwb(addr)	__asm__ __volatile__ ( "ocbwb @%0\n\t" : : "r" (addr))
+
 struct task_struct *__switch_to(struct task_struct *prev,
 				struct task_struct *next);
 
@@ -198,8 +208,13 @@ do {							\
 })
 #endif
 
+static inline reg_size_t register_align(void *val)
+{
+	return (unsigned long)(signed long)val;
+}
+
 int handle_unaligned_access(insn_size_t instruction, struct pt_regs *regs,
-			    struct mem_access *ma);
+			    struct mem_access *ma, int);
 
 asmlinkage void do_address_error(struct pt_regs *regs,
 				 unsigned long writeaccess,
@@ -216,5 +231,34 @@ asmlinkage void do_illegal_slot_inst(unsigned long r4, unsigned long r5,
 asmlinkage void do_exception_error(unsigned long r4, unsigned long r5,
 				   unsigned long r6, unsigned long r7,
 				   struct pt_regs __regs);
+
+static inline void set_bl_bit(void)
+{
+	unsigned long __dummy0, __dummy1;
+
+	__asm__ __volatile__ (
+		"stc	sr, %0\n\t"
+		"or	%2, %0\n\t"
+		"and	%3, %0\n\t"
+		"ldc	%0, sr\n\t"
+		: "=&r" (__dummy0), "=r" (__dummy1)
+		: "r" (0x10000000), "r" (0xffffff0f)
+		: "memory"
+	);
+}
+
+static inline void clear_bl_bit(void)
+{
+	unsigned long __dummy0, __dummy1;
+
+	__asm__ __volatile__ (
+		"stc	sr, %0\n\t"
+		"and	%2, %0\n\t"
+		"ldc	%0, sr\n\t"
+		: "=&r" (__dummy0), "=r" (__dummy1)
+		: "1" (~0x10000000)
+		: "memory"
+	);
+}
 
 #endif /* __ASM_SH_SYSTEM_32_H */

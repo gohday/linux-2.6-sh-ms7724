@@ -5,11 +5,12 @@
 #include <linux/signal.h>
 #include <linux/sched.h>
 #include <linux/uaccess.h>
+#include <linux/hardirq.h>
 #include <asm/unwinder.h>
 #include <asm/system.h>
 
-#ifdef CONFIG_BUG
-void handle_BUG(struct pt_regs *regs)
+#ifdef CONFIG_GENERIC_BUG
+static void handle_BUG(struct pt_regs *regs)
 {
 	const struct bug_entry *bug;
 	unsigned long bugaddr = regs->pc;
@@ -80,7 +81,7 @@ BUILD_TRAP_HANDLER(bug)
 		       SIGTRAP) == NOTIFY_STOP)
 		return;
 
-#ifdef CONFIG_BUG
+#ifdef CONFIG_GENERIC_BUG
 	if (__kernel_text_address(instruction_pointer(regs))) {
 		insn_size_t insn = *(insn_size_t *)instruction_pointer(regs);
 		if (insn == TRAPA_BUG_OPCODE)
@@ -90,4 +91,26 @@ BUILD_TRAP_HANDLER(bug)
 #endif
 
 	force_sig(SIGTRAP, current);
+}
+
+BUILD_TRAP_HANDLER(nmi)
+{
+	unsigned int cpu = smp_processor_id();
+	TRAP_HANDLER_DECL;
+
+	nmi_enter();
+	nmi_count(cpu)++;
+
+	switch (notify_die(DIE_NMI, "NMI", regs, 0, vec & 0xff, SIGINT)) {
+	case NOTIFY_OK:
+	case NOTIFY_STOP:
+		break;
+	case NOTIFY_BAD:
+		die("Fatal Non-Maskable Interrupt", regs, SIGINT);
+	default:
+		printk(KERN_ALERT "Got NMI, but nobody cared. Ignoring...\n");
+		break;
+	}
+
+	nmi_exit();
 }

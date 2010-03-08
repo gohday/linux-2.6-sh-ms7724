@@ -49,6 +49,7 @@
 struct sh_cpuinfo cpu_data[NR_CPUS] __read_mostly = {
 	[0] = {
 		.type			= CPU_SH_NONE,
+		.family			= CPU_FAMILY_UNKNOWN,
 		.loops_per_jiffy	= 10000000,
 	},
 };
@@ -404,10 +405,14 @@ void __init setup_arch(char **cmdline_p)
 	if (!memory_end)
 		memory_end = memory_start + __MEMORY_SIZE;
 
-#ifdef CONFIG_CMDLINE_BOOL
+#ifdef CONFIG_CMDLINE_OVERWRITE
 	strlcpy(command_line, CONFIG_CMDLINE, sizeof(command_line));
 #else
 	strlcpy(command_line, COMMAND_LINE, sizeof(command_line));
+#ifdef CONFIG_CMDLINE_EXTEND
+	strlcat(command_line, " ", sizeof(command_line));
+	strlcat(command_line, CONFIG_CMDLINE, sizeof(command_line));
+#endif
 #endif
 
 	/* Save unparsed command line copy for /proc/cmdline */
@@ -417,6 +422,9 @@ void __init setup_arch(char **cmdline_p)
 	parse_early_param();
 
 	plat_early_device_setup();
+
+	/* Let earlyprintk output early console messages */
+	early_platform_driver_probe("earlyprintk", 1, 1);
 
 	sh_mv_setup();
 
@@ -447,6 +455,10 @@ void __init setup_arch(char **cmdline_p)
 		sh_mv.mv_setup(cmdline_p);
 
 	paging_init();
+
+#ifdef CONFIG_PMB_ENABLE
+	pmb_init();
+#endif
 
 #ifdef CONFIG_SMP
 	plat_smp_setup();
@@ -544,6 +556,8 @@ static int show_cpuinfo(struct seq_file *m, void *v)
 
 	if (cpu == 0)
 		seq_printf(m, "machine\t\t: %s\n", get_system_type());
+	else
+		seq_printf(m, "\n");
 
 	seq_printf(m, "processor\t: %d\n", cpu);
 	seq_printf(m, "cpu family\t: %s\n", init_utsname()->machine);

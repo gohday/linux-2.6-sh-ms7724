@@ -11,8 +11,8 @@
  *
  * Copyright (c) 2002-5 Patrick Mochel
  * Copyright (c) 2002-3 Open Source Development Labs
- * Copyright (c) 2007 Greg Kroah-Hartman <gregkh@suse.de>
- * Copyright (c) 2007 Novell Inc.
+ * Copyright (c) 2007-2009 Greg Kroah-Hartman <gregkh@suse.de>
+ * Copyright (c) 2007-2009 Novell Inc.
  *
  * This file is released under the GPLv2
  */
@@ -188,7 +188,7 @@ EXPORT_SYMBOL_GPL(wait_for_device_probe);
  * @dev: device to try to bind to the driver
  *
  * This function returns -ENODEV if the device is not registered,
- * 1 if the device is bound sucessfully and 0 otherwise.
+ * 1 if the device is bound successfully and 0 otherwise.
  *
  * This function must be called with @dev->sem held.  When called for a
  * USB interface, @dev->parent->sem must be held as well.
@@ -391,3 +391,30 @@ void driver_detach(struct device_driver *drv)
 		put_device(dev);
 	}
 }
+
+/*
+ * These exports can't be _GPL due to .h files using this within them, and it
+ * might break something that was previously working...
+ */
+void *dev_get_drvdata(const struct device *dev)
+{
+	if (dev && dev->p)
+		return dev->p->driver_data;
+	return NULL;
+}
+EXPORT_SYMBOL(dev_get_drvdata);
+
+void dev_set_drvdata(struct device *dev, void *data)
+{
+	int error;
+
+	if (!dev)
+		return;
+	if (!dev->p) {
+		error = device_private_init(dev);
+		if (error)
+			return;
+	}
+	dev->p->driver_data = data;
+}
+EXPORT_SYMBOL(dev_set_drvdata);
