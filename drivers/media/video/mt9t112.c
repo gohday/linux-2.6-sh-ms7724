@@ -950,11 +950,11 @@ static int mt9t112_set_params(struct soc_camera_device *icd,
 
 		ECHECKER(mt9t112_init_camera(icd));
 
-		/* for 30Hz */
+		/* for 30Hz
 		ECHECKER(mt9t112_mcu_write(icd, VAR(18, 12), 0x0024));
 		ECHECKER(mt9t112_mcu_write(icd, VAR(26, 21), 0x0006));
 		ECHECKER(mt9t112_mcu_write(icd, VAR(26, 23), 0x0007));
-		ECHECKER(mt9t112_mcu_write(icd, VAR(26, 45), 0x0000));
+		*/
 
 		/*
 		 * Invert PCLK (Data sampled on falling edge of pixclk)
