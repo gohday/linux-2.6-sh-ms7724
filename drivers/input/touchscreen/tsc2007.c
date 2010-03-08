@@ -60,6 +60,9 @@
 #define READ_X		(ADC_ON_12BIT | TSC2007_MEASURE_X)
 #define PWRDOWN		(TSC2007_12BIT | TSC2007_POWER_OFF_IRQ_EN)
 
+#define MAX_X (4096 - 1)
+#define MAX_Y (4096 - 1)
+
 struct ts_event {
 	u16	x;
 	u16	y;
@@ -116,6 +119,10 @@ static void tsc2007_read_values(struct tsc2007 *tsc, struct ts_event *tc)
 	/* turn y+ off, x- on; we'll use formula #1 */
 	tc->z1 = tsc2007_xfer(tsc, READ_Z1);
 	tc->z2 = tsc2007_xfer(tsc, READ_Z2);
+
+	/* invert */
+	tc->y = MAX_Y - tc->y;
+	tc->x = MAX_X - tc->x;
 
 	/* Prepare for next touch reading - power down ADC, enable PENIRQ */
 	tsc2007_xfer(tsc, PWRDOWN);
