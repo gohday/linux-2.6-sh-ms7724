@@ -882,6 +882,12 @@ static int mt9t112_s_stream(struct v4l2_subdev *sd, int enable)
 
 		ECHECKER(ret, mt9t112_init_camera(client));
 
+		/* for 30Hz */
+		ECHECKER(mt9t112_mcu_write(icd, VAR(18, 12), 0x0024));
+		ECHECKER(mt9t112_mcu_write(icd, VAR(26, 21), 0x0006));
+		ECHECKER(mt9t112_mcu_write(icd, VAR(26, 23), 0x0007));
+		ECHECKER(mt9t112_mcu_write(icd, VAR(26, 45), 0x0000));
+
 		/* Invert PCLK (Data sampled on falling edge of pixclk) */
 		mt9t112_reg_write(ret, client, 0x3C20, param);
 
