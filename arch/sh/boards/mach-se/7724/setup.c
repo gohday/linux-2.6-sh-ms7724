@@ -595,7 +595,7 @@ arch_initcall(arch_setup);
 static int __init devices_setup(void)
 {
 	u16 sw = ctrl_inw(SW4140); /* select camera, monitor */
-	struct clk *fsia_clk;
+	struct clk *clk;
 
 	/* register board specific self-refresh code */
 	sh_mobile_register_self_refresh(SUSP_SH_STANDBY | SUSP_SH_SF,
@@ -764,13 +764,18 @@ static int __init devices_setup(void)
 	gpio_request(GPIO_FN_CLKAUDIOBO, NULL);
 	gpio_request(GPIO_FN_FSIIASD,    NULL);
 
+	/* set SPU2 clock to 83.4 MHz */
+	clk = clk_get(NULL, "spu_clk");
+	clk_set_rate(clk, clk_round_rate(clk, 83333333));
+	clk_put(clk);
+
 	/* change parent of FSI A */
-	fsia_clk = clk_get(NULL, "fsia_clk");
+	clk = clk_get(NULL, "fsia_clk");
 	clk_register(&fsimcka_clk);
-	clk_set_parent(fsia_clk, &fsimcka_clk);
-	clk_set_rate(fsia_clk, 11000);
+	clk_set_parent(clk, &fsimcka_clk);
+	clk_set_rate(clk, 11000);
 	clk_set_rate(&fsimcka_clk, 11000);
-	clk_put(fsia_clk);
+	clk_put(clk);
 
 	/* SDHI0 connected to cn7 */
 	gpio_request(GPIO_FN_SDHI0CD, NULL);
