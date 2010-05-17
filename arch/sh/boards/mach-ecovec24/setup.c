@@ -753,47 +753,6 @@ static struct platform_device fsi_device = {
 	},
 };
 
-/* for DirectFB */
-/* 2DG */
-static struct resource twodg_resources[] = {
-	[0] = {
-		.name   = "2DG",
-		.start  = 0xa4680000,
-		.end    = 0xa46800ff,
-		.flags  = IORESOURCE_MEM,
-	},
-	[1] = {
-		.start  = 44,
-		.flags  = IORESOURCE_IRQ,
-	},
-};
-
-static struct platform_device twodg_device = {
-	.name           = "2dg",
-	.num_resources  = ARRAY_SIZE(twodg_resources),
-	.resource       = twodg_resources,
-};
-
-/* BEU */
-static struct resource beu0_resources[] = {
-	[0] = {
-		.name   = "BEU0",
-		.start  = 0xfe930000,
-		.end    = 0xfe9333ff,
-		.flags  = IORESOURCE_MEM,
-	},
-	[1] = {
-		.start  = 53,
-		.flags  = IORESOURCE_IRQ,
-	},
-};
-
-static struct platform_device beu0_device = {
-	.name           = "beu0",
-	.num_resources  = ARRAY_SIZE(beu0_resources),
-	.resource       = beu0_resources,
-};
-
 static struct platform_device *ecovec_devices[] __initdata = {
 	&heartbeat_device,
 	&nor_flash_device,
@@ -814,8 +773,6 @@ static struct platform_device *ecovec_devices[] __initdata = {
 	&camera_devices[1],
 	&camera_devices[2],
 	&fsi_device,
-	&beu0_device,
-	&twodg_device,
 };
 
 #define EEPROM_ADDR 0x50
@@ -1174,15 +1131,6 @@ static int __init arch_setup(void)
 	/* set VPU clock to 166 MHz */
 	clk = clk_get(NULL, "vpu_clk");
 	clk_set_rate(clk, clk_round_rate(clk, 166000000));
-	clk_put(clk);
-
-	/* enable 2dg and beu */
-	clk = clk_get(NULL, "2dg0");
-	clk_enable(clk);
-	clk_put(clk);
-
-	clk = clk_get(NULL, "beu0");
-	clk_enable(clk);
 	clk_put(clk);
 
 	/* enable I2C device */
