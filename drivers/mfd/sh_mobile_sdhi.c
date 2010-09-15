@@ -112,6 +112,12 @@ static int __init sh_mobile_sdhi_probe(struct platform_device *pdev)
 		mmc_data->ocr_mask = p->tmio_ocr_mask;
 	}
 
+	/*
+	 * All SDHI blocks support 2-byte and larger block sizes in 4-bit
+	 * bus width mode.
+	 */
+	mmc_data->flags |= TMIO_MMC_BLKSZ_2BYTES;
+
 	if (p && p->dma_slave_tx >= 0 && p->dma_slave_rx >= 0) {
 		priv->param_tx.slave_id = p->dma_slave_tx;
 		priv->param_rx.slave_id = p->dma_slave_rx;
